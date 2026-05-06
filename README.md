@@ -23,6 +23,7 @@ The project was built to demonstrate modern frontend and backend development pra
 # Tech Stack
 
 ## Frontend
+
 - React
 - TypeScript
 - Tailwind CSS
@@ -30,12 +31,14 @@ The project was built to demonstrate modern frontend and backend development pra
 - React Hooks
 
 ## Backend
+
 - Spring Boot
 - Java
 - REST APIs
 - Maven
 
 ## Database & Tools
+
 - SQL
 - Git & GitHub
 - IntelliJ IDEA
@@ -51,6 +54,9 @@ skillmatch/
 ├── backend/
 ├── screenshots/
 └── README.md
+```
+
+---
 
 ## Goals
 
@@ -60,12 +66,17 @@ The goal of this project is to simplify the job application process by helping u
 - evaluate skill alignment
 - improve application tracking through AI-assisted analysis
 
+---
+
+## Screenshots
+
+Screenshots will be added soon.
 
 ---
 
 ## Future Improvements
 
-- Authentication and Authorization
+- Authentication & Authorization
 - AI-enhanced resume analysis
 - Docker support
 - Automated testing
@@ -76,7 +87,7 @@ The goal of this project is to simplify the job application process by helping u
 
 ## Author
 
- Azadeh Vaseghi
+Azadeh Vaseghi
 
 GitHub:
 https://github.com/avaseghidev-hub
