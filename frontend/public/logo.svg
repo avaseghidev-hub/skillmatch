@@ -1,0 +1,32 @@
+<svg width="64" height="64" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .left { fill: var(--logo-left, #0f172a); }
+    .right { fill: var(--logo-right, #3b82f6); }
+    .handle { stroke: var(--logo-left, #0f172a); }
+  </style>
+
+  <!-- Handle -->
+  <path
+    d="M70 48 Q70 18 100 18 Q130 18 130 48"
+    fill="none"
+    stroke-width="12"
+    stroke-linecap="round"
+    class="handle"
+  />
+
+  <!-- Left suitcase -->
+  <path
+    d="M20 65 Q20 45 42 45 H100 V145 H42 Q20 145 20 123 Z"
+    class="left"
+  />
+
+  <!-- Right suitcase -->
+  <path
+    d="M100 45 H158 Q180 45 180 65 V123 Q180 145 158 145 H100 Z"
+    class="right"
+  />
+
+  <!-- Puzzle holes -->
+  <circle cx="100" cy="88" r="13" fill="white"/>
+  <circle cx="100" cy="112" r="13" class="right"/>
+</svg>
