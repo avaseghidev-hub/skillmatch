@@ -5,6 +5,7 @@ import com.azadeh.skillmatch.applicationstep.dto.CreateApplicationStepRequest;
 import com.azadeh.skillmatch.applicationstep.dto.UpdateApplicationStepRequest;
 import com.azadeh.skillmatch.applicationstep.entity.ApplicationStep;
 import com.azadeh.skillmatch.applicationstep.repository.ApplicationStepRepository;
+import com.azadeh.skillmatch.common.exception.ResourceNotFoundException;
 import com.azadeh.skillmatch.jobapplication.entity.JobApplication;
 import com.azadeh.skillmatch.jobapplication.repository.JobApplicationRepository;
 import org.springframework.stereotype.Service;
@@ -28,7 +29,7 @@ public class ApplicationStepService {
 
     public ApplicationStepResponse createStep(CreateApplicationStepRequest request) {
         JobApplication jobApplication = jobApplicationRepository.findById(request.getJobApplicationId())
-                .orElseThrow(() -> new RuntimeException("Job application not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Job application not found"));
 
         ApplicationStep step = new ApplicationStep();
         step.setJobApplication(jobApplication);
@@ -53,14 +54,14 @@ public class ApplicationStepService {
 
     public ApplicationStepResponse getStepById(Long id) {
         ApplicationStep step = applicationStepRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Application step not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Application step not found"));
 
         return mapToResponse(step);
     }
 
     public ApplicationStepResponse updateStep(Long id, UpdateApplicationStepRequest request) {
         ApplicationStep step = applicationStepRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Application step not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Application step not found"));
 
         if (request.getType() != null) {
             step.setType(request.getType());
@@ -91,7 +92,7 @@ public class ApplicationStepService {
 
     public void deleteStep(Long id) {
         if (!applicationStepRepository.existsById(id)) {
-            throw new RuntimeException("Application step not found");
+            throw new ResourceNotFoundException("Application step not found");
         }
 
         applicationStepRepository.deleteById(id);

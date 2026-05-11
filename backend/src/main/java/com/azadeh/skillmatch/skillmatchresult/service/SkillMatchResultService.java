@@ -1,9 +1,12 @@
 package com.azadeh.skillmatch.skillmatchresult.service;
 
+import com.azadeh.skillmatch.common.exception.ResourceNotFoundException;
+import com.azadeh.skillmatch.common.service.SkillNormalizerService;
 import com.azadeh.skillmatch.jobapplication.entity.JobApplication;
 import com.azadeh.skillmatch.jobapplication.repository.JobApplicationRepository;
 import com.azadeh.skillmatch.profile.entity.UserProfile;
 import com.azadeh.skillmatch.profile.repository.UserProfileRepository;
+import com.azadeh.skillmatch.resume.service.SkillExtractionService;
 import com.azadeh.skillmatch.skillmatchresult.dto.CreateSkillMatchResultRequest;
 import com.azadeh.skillmatch.skillmatchresult.dto.SkillMatchResultResponse;
 import com.azadeh.skillmatch.skillmatchresult.entity.SkillMatchResult;
@@ -21,50 +24,82 @@ public class SkillMatchResultService {
     private final SkillMatchResultRepository skillMatchResultRepository;
     private final JobApplicationRepository jobApplicationRepository;
     private final UserProfileRepository userProfileRepository;
+    private final SkillExtractionService skillExtractionService;
+    private final SkillNormalizerService skillNormalizerService;
 
     public SkillMatchResultService(
             SkillMatchResultRepository skillMatchResultRepository,
             JobApplicationRepository jobApplicationRepository,
-            UserProfileRepository userProfileRepository
+            UserProfileRepository userProfileRepository,
+            SkillExtractionService skillExtractionService,
+            SkillNormalizerService skillNormalizerService
     ) {
         this.skillMatchResultRepository = skillMatchResultRepository;
         this.jobApplicationRepository = jobApplicationRepository;
         this.userProfileRepository = userProfileRepository;
+        this.skillExtractionService = skillExtractionService;
+        this.skillNormalizerService = skillNormalizerService;
     }
 
-    // Analyze and persist the skill match result
+    // Analyze a job application by id and return a response DTO
     @Transactional
     public SkillMatchResultResponse analyzeJobApplication(CreateSkillMatchResultRequest request) {
         JobApplication jobApplication = jobApplicationRepository.findById(request.getJobApplicationId())
-                .orElseThrow(() -> new RuntimeException("Job application not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Job application not found"));
 
-        UserProfile profile = userProfileRepository.findByUserId(jobApplication.getUser().getId())
-                .orElseThrow(() -> new RuntimeException("User profile not found"));
+        SkillMatchResult savedResult = analyzeAndSave(jobApplication);
 
-        // Reuse existing analysis result or create a new one
+        return mapToResponse(savedResult);
+    }
+
+    // Analyze a saved job application entity and return the persisted result
+    @Transactional
+    public SkillMatchResult analyzeByJobApplication(JobApplication jobApplication) {
+        return analyzeAndSave(jobApplication);
+    }
+
+    // Get the persisted analysis result for a job application
+    public SkillMatchResultResponse getResultByJobApplicationId(Long jobApplicationId) {
+        SkillMatchResult result = skillMatchResultRepository.findByJobApplicationId(jobApplicationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Skill match result not found"));
+
+        return mapToResponse(result);
+    }
+
+    // Core skill match logic shared by manual and automatic analysis
+    private SkillMatchResult analyzeAndSave(JobApplication jobApplication) {
+        UserProfile profile = userProfileRepository
+                .findByUserId(jobApplication.getUser().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
+
         SkillMatchResult result = skillMatchResultRepository
                 .findByJobApplicationId(jobApplication.getId())
                 .orElse(new SkillMatchResult());
 
-        List<String> userSkills = splitSkills(profile.getSkills());
+        List<String> userSkills = splitAndNormalizeSkills(profile.getSkills());
 
-        String jobDescription = jobApplication.getJobDescription() == null
-                ? ""
-                : jobApplication.getJobDescription().toLowerCase();
+        String normalizedJobDescription = normalizeJobDescription(
+                jobApplication.getJobDescription()
+        );
 
-        List<String> skillsFoundInJob = userSkills.stream()
-                .filter(skill -> jobDescription.contains(skill.toLowerCase()))
+        List<String> jobSkills = skillExtractionService.extractSkills(normalizedJobDescription)
+                .stream()
+                .map(skillNormalizerService::normalize)
+                .distinct()
                 .toList();
 
-        List<String> missingSkills = userSkills.stream()
-                .filter(skill -> !jobDescription.contains(skill.toLowerCase()))
+        List<String> matchedSkills = jobSkills.stream()
+                .filter(userSkills::contains)
                 .toList();
 
-        double matchScore = userSkills.isEmpty()
+        List<String> missingSkills = jobSkills.stream()
+                .filter(jobSkill -> !userSkills.contains(jobSkill))
+                .toList();
+
+        double matchScore = jobSkills.isEmpty()
                 ? 0
-                : ((double) skillsFoundInJob.size() / userSkills.size()) * 100;
+                : ((double) matchedSkills.size() / jobSkills.size()) * 100;
 
-        // Keep createdAt stable and refresh updatedAt on each analysis
         LocalDateTime now = LocalDateTime.now();
 
         if (result.getCreatedAt() == null) {
@@ -72,26 +107,18 @@ public class SkillMatchResultService {
         }
 
         result.setJobApplication(jobApplication);
-        result.setSkillsFoundInJob(String.join(", ", skillsFoundInJob));
-        result.setMatchedSkills(String.join(", ", skillsFoundInJob));
-        result.setMissingSkills(String.join(", ", missingSkills));
+        result.setSkillsFoundInJob(String.join(", ", formatSkills(jobSkills)));
+        result.setMatchedSkills(String.join(", ", formatSkills(matchedSkills)));
+        result.setMissingSkills(String.join(", ", formatSkills(missingSkills)));
         result.setMatchScore(Math.round(matchScore * 100.0) / 100.0);
         result.setRecommendation(generateRecommendation(matchScore));
         result.setUpdatedAt(now);
 
-        SkillMatchResult savedResult = skillMatchResultRepository.save(result);
-
-        return mapToResponse(savedResult);
+        return skillMatchResultRepository.save(result);
     }
 
-    public SkillMatchResultResponse getResultByJobApplicationId(Long jobApplicationId) {
-        SkillMatchResult result = skillMatchResultRepository.findByJobApplicationId(jobApplicationId)
-                .orElseThrow(() -> new RuntimeException("Skill match result not found"));
-
-        return mapToResponse(result);
-    }
-
-    private List<String> splitSkills(String skills) {
+    // Split comma-separated profile skills and normalize them for comparison
+    private List<String> splitAndNormalizeSkills(String skills) {
         if (skills == null || skills.isBlank()) {
             return List.of();
         }
@@ -99,9 +126,47 @@ public class SkillMatchResultService {
         return Arrays.stream(skills.split(","))
                 .map(String::trim)
                 .filter(skill -> !skill.isBlank())
+                .map(skillNormalizerService::normalize)
+                .distinct()
                 .toList();
     }
 
+    // Normalize job description text before skill extraction
+    private String normalizeJobDescription(String jobDescription) {
+        if (jobDescription == null || jobDescription.isBlank()) {
+            return "";
+        }
+
+        return jobDescription
+                .toLowerCase()
+                .replace("postgre sql", "postgresql")
+                .replace("react.js", "react")
+                .replace("reactjs", "react")
+                .replace("node.js", "node")
+                .replace("nodejs", "node");
+    }
+
+    // Format normalized skill names for readable API response
+    private List<String> formatSkills(List<String> skills) {
+        return skills.stream()
+                .map(this::formatSkill)
+                .toList();
+    }
+
+    // Convert normalized skill values to display-friendly labels
+    private String formatSkill(String skill) {
+        return switch (skill) {
+            case "javascript" -> "JavaScript";
+            case "typescript" -> "TypeScript";
+            case "postgresql" -> "PostgreSQL";
+            case "spring boot" -> "Spring Boot";
+            case "react" -> "React";
+            case "java" -> "Java";
+            default -> skill;
+        };
+    }
+
+    // Generate recommendation text based on match score
     private String generateRecommendation(double matchScore) {
         if (matchScore >= 80) {
             return "Strong match. This job is highly aligned with your profile.";
@@ -114,7 +179,7 @@ public class SkillMatchResultService {
         return "Low match. You may need to improve the missing skills before applying.";
     }
 
-
+    // Map entity to API response DTO
     private SkillMatchResultResponse mapToResponse(SkillMatchResult result) {
         return new SkillMatchResultResponse(
                 result.getId(),

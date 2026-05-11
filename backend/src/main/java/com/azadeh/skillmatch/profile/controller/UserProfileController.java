@@ -6,6 +6,7 @@ import com.azadeh.skillmatch.profile.dto.UserProfileResponse;
 import com.azadeh.skillmatch.profile.service.UserProfileService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/profiles")
@@ -34,4 +35,13 @@ public class UserProfileController {
     ) {
         return userProfileService.updateProfile(userId, request);
     }
+
+    @PostMapping("/user/{userId}/resume")
+    public UserProfileResponse uploadResume(
+            @PathVariable Long userId,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return userProfileService.uploadResume(userId, file);
+    }
+
 }

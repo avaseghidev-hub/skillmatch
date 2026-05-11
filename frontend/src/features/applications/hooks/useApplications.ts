@@ -10,6 +10,7 @@ import type {
   CreateJobApplicationRequest,
   JobApplication,
 } from "../../../types/application";
+import { useAuth } from "../../auth/context/AuthContext";
 
 type ToastState = {
   message: string;
@@ -17,6 +18,8 @@ type ToastState = {
 } | null;
 
 export const useApplications = () => {
+  const { userId } = useAuth();
+
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingId, setLoadingId] = useState<number | null>(null);
@@ -28,11 +31,19 @@ export const useApplications = () => {
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const fetchApplications = async () => {
+    if (!userId) {
+      setApplications([]);
+      setLoading(false);
+      return;
+    }
+
     try {
-      const data = await getApplications();
+      setLoading(true);
+      const data = await getApplications(userId);
       setApplications(data);
     } catch (error) {
       console.error("Failed to fetch applications:", error);
+      setApplications([]);
     } finally {
       setLoading(false);
     }
@@ -40,7 +51,7 @@ export const useApplications = () => {
 
   useEffect(() => {
     fetchApplications();
-  }, []);
+  }, [userId]);
 
   const handleCreateApplication = async (
     data: CreateJobApplicationRequest
@@ -87,7 +98,6 @@ export const useApplications = () => {
 
       const result = await analyzeApplication(applicationId);
 
-      // Store persisted analysis result inside the related application
       setApplications((prev) =>
         prev.map((app) =>
           app.id === applicationId
@@ -118,7 +128,6 @@ export const useApplications = () => {
   };
 
   const handleClearAnalysis = (applicationId: number) => {
-    // Hide analysis result locally without deleting persisted backend data
     setApplications((prev) =>
       prev.map((app) =>
         app.id === applicationId

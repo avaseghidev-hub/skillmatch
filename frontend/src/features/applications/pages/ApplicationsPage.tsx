@@ -21,10 +21,11 @@ import {
   getFiltersFromUrl,
   syncFiltersToUrl,
 } from "../utils/applicationFilterUrlUtils";
+import { useAuth } from "../../auth/context/AuthContext";
 
 export const ApplicationsPage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
-
+  const { logoutUser, user } = useAuth();
   const [filters, setFilters] = useState<ApplicationFilters>(() =>
     getFiltersFromUrl()
   );
@@ -98,9 +99,27 @@ export const ApplicationsPage = () => {
           </div>
         </div>
 
-        {!loading && applications.length > 0 && !isFormOpen && (
+        {!loading && !isFormOpen && (
           <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="text-sm font-semibold">
+                {user?.name}
+              </p>
+
+              <p className="text-xs text-[var(--muted-foreground)]">
+                {user?.email}
+              </p>
+            </div>
+
             <ThemeToggle />
+
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={logoutUser}
+            >
+              Logout
+            </Button>
 
             <Button onClick={() => setIsFormOpen(true)}>
               + Add Job Application
@@ -178,6 +197,20 @@ export const ApplicationsPage = () => {
               onClick={() => setFilters(initialApplicationFilters)}
             >
               Clear Filters
+            </Button>
+          </div>
+        </div>
+      ) : !isFormOpen && applications.length === 0 ? (
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-8 text-center">
+          <h2 className="text-lg font-semibold">No applications yet</h2>
+          <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+            Add your first job application to start tracking and analyzing
+            matches.
+          </p>
+
+          <div className="mt-4">
+            <Button type="button" onClick={() => setIsFormOpen(true)}>
+              + Add Job Application
             </Button>
           </div>
         </div>

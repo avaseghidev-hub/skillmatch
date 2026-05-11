@@ -6,6 +6,7 @@ import com.azadeh.skillmatch.jobapplication.dto.UpdateJobApplicationRequest;
 import com.azadeh.skillmatch.jobapplication.service.JobApplicationService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -47,5 +48,30 @@ public class JobApplicationController {
     @DeleteMapping("/{id}")
     public void deleteJobApplication(@PathVariable Long id) {
         jobApplicationService.deleteJobApplication(id);
+    }
+
+    @PostMapping("/from-image")
+    public JobApplicationResponse createJobApplicationFromImage(
+            @RequestParam Long userId,
+            @RequestParam String companyName,
+            @RequestParam String jobTitle,
+            @RequestParam(required = false) String jobUrl,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) String workMode,
+            @RequestParam(required = false) String source,
+            @RequestParam(required = false) String notes,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return jobApplicationService.createJobApplicationFromImage(
+                userId,
+                companyName,
+                jobTitle,
+                jobUrl,
+                location,
+                workMode,
+                source,
+                notes,
+                file
+        );
     }
 }

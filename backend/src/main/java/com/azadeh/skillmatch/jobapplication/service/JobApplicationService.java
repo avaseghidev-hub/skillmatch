@@ -1,11 +1,15 @@
 package com.azadeh.skillmatch.jobapplication.service;
 
+import com.azadeh.skillmatch.common.exception.ResourceNotFoundException;
 import com.azadeh.skillmatch.jobapplication.dto.CreateJobApplicationRequest;
 import com.azadeh.skillmatch.jobapplication.dto.JobApplicationResponse;
 import com.azadeh.skillmatch.jobapplication.dto.UpdateJobApplicationRequest;
 import com.azadeh.skillmatch.jobapplication.entity.ApplicationStatus;
 import com.azadeh.skillmatch.jobapplication.entity.JobApplication;
 import com.azadeh.skillmatch.jobapplication.repository.JobApplicationRepository;
+import com.azadeh.skillmatch.jobdescription.service.JobDescriptionOcrService;
+import com.azadeh.skillmatch.skillmatchresult.dto.CreateSkillMatchResultRequest;
+import com.azadeh.skillmatch.skillmatchresult.service.SkillMatchResultService;
 import com.azadeh.skillmatch.user.entity.User;
 import com.azadeh.skillmatch.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -14,6 +18,7 @@ import com.azadeh.skillmatch.applicationstep.repository.ApplicationStepRepositor
 import com.azadeh.skillmatch.skillmatchresult.repository.SkillMatchResultRepository;
 import com.azadeh.skillmatch.skillmatchresult.dto.SkillMatchResultResponse;
 import com.azadeh.skillmatch.skillmatchresult.entity.SkillMatchResult;
+import org.springframework.web.multipart.MultipartFile;
 
 
 import java.time.LocalDateTime;
@@ -26,24 +31,33 @@ public class JobApplicationService {
     private final UserRepository userRepository;
     private final ApplicationStepRepository applicationStepRepository;
     private  final SkillMatchResultRepository skillMatchResultRepository;
+    private final SkillMatchResultService skillMatchResultService;
+    private final JobDescriptionOcrService jobDescriptionOcrService;
 
     public JobApplicationService(
             JobApplicationRepository jobApplicationRepository,
             UserRepository userRepository,
             ApplicationStepRepository applicationStepRepository,
-            SkillMatchResultRepository skillMatchResultRepository
+            SkillMatchResultRepository skillMatchResultRepository,
+            SkillMatchResultService skillMatchResultService,
+            JobDescriptionOcrService jobDescriptionOcrService
     ) {
         this.jobApplicationRepository = jobApplicationRepository;
         this.userRepository = userRepository;
-        this.applicationStepRepository=applicationStepRepository;
-        this.skillMatchResultRepository=skillMatchResultRepository;
+        this.applicationStepRepository = applicationStepRepository;
+        this.skillMatchResultRepository = skillMatchResultRepository;
+        this.skillMatchResultService = skillMatchResultService;
+        this.jobDescriptionOcrService = jobDescriptionOcrService;
     }
 
+    // Create a new job application and automatically analyze skill match
     public JobApplicationResponse createJobApplication(CreateJobApplicationRequest request) {
+
         User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         JobApplication jobApplication = new JobApplication();
+
         jobApplication.setUser(user);
         jobApplication.setCompanyName(request.getCompanyName());
         jobApplication.setJobTitle(request.getJobTitle());
@@ -53,11 +67,22 @@ public class JobApplicationService {
         jobApplication.setSource(request.getSource());
         jobApplication.setJobDescription(request.getJobDescription());
         jobApplication.setNotes(request.getNotes());
+
         jobApplication.setStatus(ApplicationStatus.SAVED);
+
         jobApplication.setCreatedAt(LocalDateTime.now());
         jobApplication.setUpdatedAt(LocalDateTime.now());
 
-        JobApplication savedJobApplication = jobApplicationRepository.save(jobApplication);
+        JobApplication savedJobApplication =
+                jobApplicationRepository.save(jobApplication);
+
+        // Automatically analyze skill match after saving application
+        CreateSkillMatchResultRequest analyzeRequest =
+                new CreateSkillMatchResultRequest();
+
+        analyzeRequest.setJobApplicationId(savedJobApplication.getId());
+
+        skillMatchResultService.analyzeJobApplication(analyzeRequest);
 
         return mapToResponse(savedJobApplication);
     }
@@ -71,14 +96,20 @@ public class JobApplicationService {
 
     public JobApplicationResponse getJobApplicationById(Long id) {
         JobApplication jobApplication = jobApplicationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Job application not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Job application not found"));
 
         return mapToResponse(jobApplication);
     }
 
-    public JobApplicationResponse updateJobApplication(Long id, UpdateJobApplicationRequest request) {
+    // Update an existing job application and refresh skill analysis
+    public JobApplicationResponse updateJobApplication(
+            Long id,
+            UpdateJobApplicationRequest request
+    ) {
+
         JobApplication jobApplication = jobApplicationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Job application not found"));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Job application not found"));
 
         if (request.getCompanyName() != null) {
             jobApplication.setCompanyName(request.getCompanyName());
@@ -118,7 +149,16 @@ public class JobApplicationService {
 
         jobApplication.setUpdatedAt(LocalDateTime.now());
 
-        JobApplication updatedJobApplication = jobApplicationRepository.save(jobApplication);
+        JobApplication updatedJobApplication =
+                jobApplicationRepository.save(jobApplication);
+
+        // Re-run analysis after updating application data
+        CreateSkillMatchResultRequest analyzeRequest =
+                new CreateSkillMatchResultRequest();
+
+        analyzeRequest.setJobApplicationId(updatedJobApplication.getId());
+
+        skillMatchResultService.analyzeJobApplication(analyzeRequest);
 
         return mapToResponse(updatedJobApplication);
     }
@@ -126,7 +166,7 @@ public class JobApplicationService {
     @Transactional
     public void deleteJobApplication(Long id) {
         if (!jobApplicationRepository.existsById(id)) {
-            throw new RuntimeException("Job application not found");
+            throw new ResourceNotFoundException("Job application not found");
         }
 
         // Delete child records first
@@ -174,4 +214,32 @@ public class JobApplicationService {
                 result.getRecommendation()
         );
     }
+
+    public JobApplicationResponse createJobApplicationFromImage(
+            Long userId,
+            String companyName,
+            String jobTitle,
+            String jobUrl,
+            String location,
+            String workMode,
+            String source,
+            String notes,
+            MultipartFile file
+    ) {
+        String extractedJobDescription = jobDescriptionOcrService.extractTextFromImage(file);
+
+        CreateJobApplicationRequest request = new CreateJobApplicationRequest();
+        request.setUserId(userId);
+        request.setCompanyName(companyName);
+        request.setJobTitle(jobTitle);
+        request.setJobUrl(jobUrl);
+        request.setLocation(location);
+        request.setWorkMode(workMode);
+        request.setSource(source);
+        request.setNotes(notes);
+        request.setJobDescription(extractedJobDescription);
+
+        return createJobApplication(request);
+    }
+
 }
