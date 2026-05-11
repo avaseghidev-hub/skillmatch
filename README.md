@@ -141,7 +141,6 @@ The platform is designed to help users:
 - improve application quality through data-driven insights
 - prepare for modern AI-assisted recruitment workflows
 
-In addition to solving real-world job search challenges, the project also serves as a full-stack engineering portfolio demonstrating scalable architecture, clean UI systems, authentication workflows, OCR integration, resume parsing, and AI-powered analysis features.
 ---
 
 ## Screenshots
