@@ -111,7 +111,9 @@ skillmatch-fullstack/
 │   │   └── skillmatchresult/
 │
 ├── screenshots/
-└── README.md---
+└── README.md
+
+---
 
 ## Current Workflow
 1. User registers and logs in
