@@ -1,8 +1,8 @@
 # SkillMatch
 
-SkillMatch is an AI-powered full-stack job application tracking platform that helps users manage job applications, upload resumes, extract skills automatically, and analyze resume-to-job compatibility through intelligent skill matching.
+SkillMatch is an AI-powered full-stack job application tracking platform that helps users manage job applications, upload resumes, extract skills automatically, parse job descriptions with OCR, and analyze resume-to-job compatibility through intelligent skill matching.
 
-The project demonstrates modern full-stack architecture using React, TypeScript, Tailwind CSS, Spring Boot, REST APIs, JWT authentication, OCR processing, and resume parsing workflows.
+The project demonstrates modern full-stack architecture using React, TypeScript, Tailwind CSS, Spring Boot, REST APIs, JWT authentication, OCR processing, resume parsing workflows, and reusable UI system design.
 
 ---
 
@@ -14,6 +14,8 @@ The project demonstrates modern full-stack architecture using React, TypeScript,
 - JWT-based authentication
 - Protected frontend routes
 - Persistent login sessions
+- User dropdown menu
+- Profile access from header
 - Logout functionality
 
 ## Resume & Profile System
@@ -24,14 +26,25 @@ The project demonstrates modern full-stack architecture using React, TypeScript,
 - Profile onboarding flow
 - Auto-filled profile fields from uploaded resumes
 - Manual profile editing support
+- Profile completion indicator
+- Live profile completion percentage
+- Resume management panel
+- Replace resume support
+- Remove resume support
+- Parsed resume status display
+- Detected skills preview
 
 ## Job Application Management
 
 - Create, update, and delete job applications
 - Store application details and notes
+- View application details in modal
+- Edit existing job applications
 - Upload job description images
 - OCR-based job description extraction
+- Auto-filled job fields from extracted descriptions
 - Persistent application tracking
+- Delete confirmation workflow
 
 ## AI Skill Matching
 
@@ -39,7 +52,19 @@ The project demonstrates modern full-stack architecture using React, TypeScript,
 - Match score calculation
 - Missing skills detection
 - Matched skills visualization
+- Recommendation panel
 - Stored analysis results
+
+## Filtering & Search
+
+- Search applications
+- Filter by application status
+- Filter by work mode
+- Filter by location
+- Filter by created date range
+- Filter by updated date range
+- URL-synced filters
+- Empty state for no results
 
 ## User Experience
 
@@ -48,7 +73,12 @@ The project demonstrates modern full-stack architecture using React, TypeScript,
 - Loading and error states
 - Reusable UI component architecture
 - Toast notifications
-- Advanced filtering and search
+- Modal system
+- Confirm modal
+- Reusable badges, buttons, cards, inputs, selects, textareas
+- Scrollable content sections
+- Collapsible sections
+- Clean SaaS-style profile and application workflows
 
 ---
 
@@ -60,6 +90,7 @@ The project demonstrates modern full-stack architecture using React, TypeScript,
 - TypeScript
 - Tailwind CSS
 - Vite
+- React Router DOM
 - React Hooks
 - Context API
 - Axios
@@ -73,6 +104,7 @@ The project demonstrates modern full-stack architecture using React, TypeScript,
 - Maven
 - Apache PDFBox
 - Tesseract OCR
+- Hibernate / JPA
 
 ## Database & DevOps
 
@@ -86,7 +118,7 @@ The project demonstrates modern full-stack architecture using React, TypeScript,
 
 # Architecture
 
-The project follows a modular full-stack architecture:
+The project follows a modular full-stack architecture with feature-based frontend organization and domain-based backend modules.
 
 ```bash
 skillmatch-fullstack/
@@ -118,18 +150,23 @@ skillmatch-fullstack/
 ---
 
 ## Current Workflow
+
 1. User registers and logs in
-2. User uploads resume PDF
-3. Resume text and skills are extracted automatically
-4. User completes profile information
-5. User adds job applications
-6. Job descriptions can be pasted or extracted from images using OCR
-7. SkillMatch analyzes compatibility between resume and job requirements
+2. User uploads a resume PDF
+3. Resume text is extracted automatically
+4. Skills and target role can be detected from the resume
+5. User completes or edits profile information
+6. Profile completion percentage updates live
+7. User can replace or remove the uploaded resume
+8. User adds job applications
+9. Job descriptions can be pasted manually or extracted from images using OCR
+10. SkillMatch analyzes compatibility between resume skills and job requirements
+11. User can track, filter, update, and manage job applications
 
 
 ## Project Goals
 
-The goal of SkillMatch is to build an intelligent career assistant platform that helps job seekers manage and improve their application process through automation, resume analysis, and AI-assisted skill matching.
+The goal of SkillMatch is to build an intelligent career assistant platform that helps job seekers manage and improve their application process through automation, resume analysis, OCR-based extraction, and AI-assisted skill matching.
 
 The platform is designed to help users:
 
@@ -140,7 +177,7 @@ The platform is designed to help users:
 - reduce manual work during job searching
 - improve application quality through data-driven insights
 - prepare for modern AI-assisted recruitment workflows
-
+- manage profile and resume data in one place
 ---
 
 ## Screenshots
@@ -178,4 +215,4 @@ GitHub:
 https://github.com/avaseghidev-hub
 
 LinkedIn:
-https://linkdin.com/in/azadeh-vaseghi
+https://linkedin.com/in/azadeh-vaseghi

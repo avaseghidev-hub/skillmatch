@@ -42,68 +42,25 @@ export const ApplicationCard = ({
 
   return (
     <Card>
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold">{application.companyName}</h2>
-          <p className="text-sm text-[var(--muted-foreground)]">
-            {application.jobTitle}
-          </p>
-        </div>
+      <ApplicationCardHeader application={application} />
 
-        <Badge variant={getStatusBadgeVariant(application.status)}>
-          {formatApplicationStatus(application.status)}
-        </Badge>
-      </div>
+      <ApplicationCardMeta application={application} />
 
-      <div className="space-y-2 text-sm text-[var(--muted-foreground)]">
-        <p>📍 {application.location || "-"}</p>
-        <p>💼 {application.workMode || "-"}</p>
-      </div>
-
-      <div className="mt-5 flex gap-2">
-        <Button variant="primary" onClick={() => setIsDetailsOpen(true)}>
-          View Details
-        </Button>
-
-        <Button
-          variant="secondary"
-          onClick={() => onAnalyze(application.id)}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <span className="flex items-center gap-2">
-              <Spinner />
-              Analyzing...
-            </span>
-          ) : analysis ? (
-            "Re-analyze"
-          ) : (
-            "Analyze"
-          )}
-        </Button>
-
-        <Button
-          variant="secondary"
-          onClick={() => setIsDeleteOpen(true)}
-          disabled={isDeleting}
-        >
-          {isDeleting ? "Deleting..." : "Delete"}
-        </Button>
-      </div>
+      <ApplicationCardActions
+        application={application}
+        hasAnalysis={Boolean(analysis)}
+        isLoading={isLoading}
+        isDeleting={isDeleting}
+        onViewDetails={() => setIsDetailsOpen(true)}
+        onAnalyze={() => onAnalyze(application.id)}
+        onDelete={() => setIsDeleteOpen(true)}
+      />
 
       {errorMessage && (
-        <div className="mt-4 rounded-lg border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger-text)]">
-          <div className="flex items-center justify-between gap-4">
-            <span>{errorMessage}</span>
-
-            <button
-              onClick={() => onAnalyze(application.id)}
-              className="text-xs font-medium underline hover:opacity-80"
-            >
-              Retry
-            </button>
-          </div>
-        </div>
+        <ApplicationErrorMessage
+          message={errorMessage}
+          onRetry={() => onAnalyze(application.id)}
+        />
       )}
 
       {analysis && (
@@ -144,5 +101,105 @@ export const ApplicationCard = ({
         />
       )}
     </Card>
+  );
+};
+
+interface ApplicationCardSectionProps {
+  application: JobApplication;
+}
+
+const ApplicationCardHeader = ({ application }: ApplicationCardSectionProps) => {
+  return (
+    <div className="mb-4 flex items-start justify-between gap-3">
+      <div>
+        <h2 className="text-lg font-bold">{application.companyName}</h2>
+        <p className="text-sm text-[var(--muted-foreground)]">
+          {application.jobTitle}
+        </p>
+      </div>
+
+      <Badge variant={getStatusBadgeVariant(application.status)}>
+        {formatApplicationStatus(application.status)}
+      </Badge>
+    </div>
+  );
+};
+
+const ApplicationCardMeta = ({ application }: ApplicationCardSectionProps) => {
+  return (
+    <div className="space-y-2 text-sm text-[var(--muted-foreground)]">
+      <p>📍 {application.location || "-"}</p>
+      <p>💼 {application.workMode || "-"}</p>
+    </div>
+  );
+};
+
+interface ApplicationCardActionsProps {
+  application: JobApplication;
+  hasAnalysis: boolean;
+  isLoading?: boolean;
+  isDeleting?: boolean;
+  onViewDetails: () => void;
+  onAnalyze: () => void;
+  onDelete: () => void;
+}
+
+const ApplicationCardActions = ({
+  hasAnalysis,
+  isLoading,
+  isDeleting,
+  onViewDetails,
+  onAnalyze,
+  onDelete,
+}: ApplicationCardActionsProps) => {
+  return (
+    <div className="mt-5 flex flex-wrap gap-2">
+      <Button variant="primary" onClick={onViewDetails}>
+        View Details
+      </Button>
+
+      <Button variant="secondary" onClick={onAnalyze} disabled={isLoading}>
+        {isLoading ? (
+          <span className="flex items-center gap-2">
+            <Spinner />
+            Analyzing...
+          </span>
+        ) : hasAnalysis ? (
+          "Re-analyze"
+        ) : (
+          "Analyze"
+        )}
+      </Button>
+
+      <Button variant="secondary" onClick={onDelete} disabled={isDeleting}>
+        {isDeleting ? "Deleting..." : "Delete"}
+      </Button>
+    </div>
+  );
+};
+
+interface ApplicationErrorMessageProps {
+  message: string;
+  onRetry: () => void;
+}
+
+const ApplicationErrorMessage = ({
+  message,
+  onRetry,
+}: ApplicationErrorMessageProps) => {
+  return (
+    <div className="mt-4 rounded-lg border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger-text)]">
+      <div className="flex items-center justify-between gap-4">
+        <span>{message}</span>
+
+        <button
+          type="button"
+          onClick={onRetry}
+          className="text-xs font-medium underline hover:opacity-80"
+        >
+          Retry
+        </button>
+      </div>
+    </div>
   );
 };

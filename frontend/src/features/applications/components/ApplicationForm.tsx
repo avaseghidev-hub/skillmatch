@@ -9,6 +9,12 @@ import { Select } from "../../../components/ui/Select";
 import { Spinner } from "../../../components/ui/Spinner";
 import { useAuth } from "../../auth/context/AuthContext";
 import { extractJobDescriptionFromImage } from "../api/jobDescriptionApi";
+import { JobDescriptionInput } from "./JobDescriptionInput";
+import { parseJobFieldsFromText } from "../utils/jobDescriptionParser";
+import {
+  WORK_MODE_OPTIONS,
+  APPLICATION_STATUS_OPTIONS,
+} from "../constants/applicationOptions";
 
 interface ApplicationFormProps {
   onSubmit: (data: CreateJobApplicationRequest) => Promise<void>;
@@ -31,34 +37,6 @@ const createInitialFormData = (userId: number): CreateJobApplicationRequest => (
   notes: "",
   status: "SAVED",
 });
-
-/**
- * Try to detect basic job fields from extracted OCR text.
- */
-const parseJobFieldsFromText = (text: string) => {
-  const lines = text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  const jobTitle =
-    lines.find((line) =>
-      /engineer|developer|frontend|backend|fullstack|software/i.test(line)
-    ) ?? "";
-
-  const workMode = /remote/i.test(text)
-    ? "Remote"
-    : /hybrid/i.test(text)
-    ? "Hybrid"
-    : /onsite|on-site/i.test(text)
-    ? "Onsite"
-    : "";
-
-  return {
-    jobTitle,
-    workMode,
-  };
-};
 
 export const ApplicationForm = ({
   onSubmit,
@@ -107,9 +85,12 @@ export const ApplicationForm = ({
       setFormData((prev) => ({
         ...prev,
         jobDescription: extractedText,
+        companyName: prev.companyName || parsedFields.companyName,
         jobTitle: prev.jobTitle || parsedFields.jobTitle,
+        location: prev.location || parsedFields.location,
         workMode: prev.workMode || parsedFields.workMode,
       }));
+
     } catch (error) {
       console.error("Image OCR failed", error);
       setFormError("Failed to extract text from image. Please try again.");
@@ -172,6 +153,13 @@ export const ApplicationForm = ({
           disabled={isSubmitting || isExtractingImage}
           className="space-y-4"
         >
+          <JobDescriptionInput
+            value={formData.jobDescription || ""}
+            onChange={(value) => handleChange("jobDescription", value)}
+            onImageUpload={handleImageUpload}
+            isExtracting={isExtractingImage}
+          />
+
           <div className="grid gap-4 md:grid-cols-2">
             <Input
               value={formData.companyName}
@@ -204,12 +192,9 @@ export const ApplicationForm = ({
               onChange={(event) =>
                 handleChange("workMode", event.target.value)
               }
-            >
-              <option value="">Select work mode</option>
-              <option value="Remote">Remote</option>
-              <option value="Hybrid">Hybrid</option>
-              <option value="Onsite">Onsite</option>
-            </Select>
+              placeholder="Select work mode"
+              options={WORK_MODE_OPTIONS}
+            />
 
             <Select
               value={formData.status}
@@ -219,14 +204,8 @@ export const ApplicationForm = ({
                   event.target.value as CreateJobApplicationRequest["status"]
                 )
               }
-            >
-              <option value="SAVED">Saved</option>
-              <option value="APPLIED">Applied</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="INTERVIEW">Interview</option>
-              <option value="OFFER">Offer</option>
-              <option value="REJECTED">Rejected</option>
-            </Select>
+              options={APPLICATION_STATUS_OPTIONS}
+            />
 
             <Input
               value={formData.jobUrl}
@@ -240,37 +219,6 @@ export const ApplicationForm = ({
               onChange={(event) => handleChange("source", event.target.value)}
               placeholder="Source"
               className="md:col-span-2"
-            />
-          </div>
-
-          <div className="rounded-xl border border-[var(--border)] p-4">
-            <div className="mb-3 flex items-center justify-between gap-4">
-              <div>
-                <h3 className="font-semibold">Job description</h3>
-                <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-                  Paste the job description text or upload an image to extract
-                  it.
-                </p>
-              </div>
-
-              <label className="cursor-pointer rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium hover:bg-[var(--muted)]">
-                {isExtractingImage ? "Extracting..." : "Upload image"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </label>
-            </div>
-
-            <Textarea
-              value={formData.jobDescription}
-              onChange={(event) =>
-                handleChange("jobDescription", event.target.value)
-              }
-              placeholder="Paste job description here..."
-              rows={6}
             />
           </div>
 

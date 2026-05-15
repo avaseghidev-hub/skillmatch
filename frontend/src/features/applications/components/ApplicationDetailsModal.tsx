@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { ReactNode } from "react";
+import type { ChangeEvent, ReactNode } from "react";
 import type {
   ApplicationStatus,
   JobApplication,
@@ -15,6 +15,14 @@ import {
   getStatusBadgeVariant,
 } from "../utils/applicationStatusUtils";
 import { Spinner } from "../../../components/ui/Spinner";
+import { ScrollableContent } from "../../../components/ui/ScrollableContent";
+import { CollapsibleSection } from "../../../components/ui/CollapsibleSection";
+import { extractJobDescriptionFromImage } from "../api/jobDescriptionApi";
+import { JobDescriptionInput } from "./JobDescriptionInput";
+import {
+  WORK_MODE_OPTIONS,
+  APPLICATION_STATUS_OPTIONS,
+} from "../constants/applicationOptions";
 
 interface ApplicationDetailsModalProps {
   application: JobApplication;
@@ -28,13 +36,12 @@ export const ApplicationDetailsModal = ({
   onClose,
   onUpdate,
   isUpdating = false,
-
 }: ApplicationDetailsModalProps) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<JobApplication>(application);
+  const [isExtractingImage, setIsExtractingImage] = useState(false);
+  const [formError, setFormError] = useState("");
 
-  // Check if form data has changed before saving
   const hasChanges =
     formData.companyName !== application.companyName ||
     formData.jobTitle !== application.jobTitle ||
@@ -62,8 +69,6 @@ export const ApplicationDetailsModal = ({
   };
 
   const handleSave = async () => {
-    setIsSaving(true);
-
     const success = await onUpdate(application.id, {
       companyName: formData.companyName,
       jobTitle: formData.jobTitle,
@@ -76,153 +81,172 @@ export const ApplicationDetailsModal = ({
       status: formData.status,
     });
 
-    setIsSaving(false);
-
     if (success) {
       setIsEditing(false);
     }
   };
 
+  /**
+   * Extract text from uploaded image while editing an application.
+   */
+  const handleImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    try {
+      setFormError("");
+      setIsExtractingImage(true);
+
+      const extractedText = await extractJobDescriptionFromImage(file);
+
+      setFormData((prev) => ({
+        ...prev,
+        jobDescription: extractedText,
+      }));
+    } catch (error) {
+      console.error("Image OCR failed", error);
+      setFormError("Failed to extract text from image. Please try again.");
+    } finally {
+      setIsExtractingImage(false);
+      event.target.value = "";
+    }
+  };
+
   return (
-    <Modal title="Application Details" onClose={onClose} size={isEditing ? "xl" : "lg"}
->
+    <Modal title="Application Details" onClose={onClose} size="xl">
       {isEditing ? (
         <div className="space-y-5 text-sm">
-            {/* Edit mode notice */}
-            <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">
             You are editing this application. Save changes when finished.
-            </div>
+          </div>
 
-            {/* Basic information */}
-            <section className="space-y-3">
+          {/* Error message */}
+          {formError && (
+            <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {formError}
+            </p>
+          )}
+
+          <section className="space-y-3">
             <div>
-                <h3 className="font-semibold">Basic Information</h3>
-                <p className="mt-1 text-xs opacity-60">
+              <h3 className="font-semibold">Basic Information</h3>
+              <p className="mt-1 text-xs opacity-60">
                 Main job and company details.
-                </p>
+              </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-                <Input
+              <Input
                 value={formData.companyName}
                 onChange={(event) =>
-                    handleChange("companyName", event.target.value)
+                  handleChange("companyName", event.target.value)
                 }
                 placeholder="Company name"
-                />
+              />
 
-                <Input
+              <Input
                 value={formData.jobTitle}
-                onChange={(event) => handleChange("jobTitle", event.target.value)}
+                onChange={(event) =>
+                  handleChange("jobTitle", event.target.value)
+                }
                 placeholder="Job title"
-                />
+              />
 
-                <Input
+              <Input
                 value={formData.location || ""}
-                onChange={(event) => handleChange("location", event.target.value)}
+                onChange={(event) =>
+                  handleChange("location", event.target.value)
+                }
                 placeholder="Location"
-                />
+              />
 
-                <Select
+              <Select
                 value={formData.workMode || ""}
                 onChange={(event) => handleChange("workMode", event.target.value)}
-                >
-                <option value="">Select work mode</option>
-                <option value="Remote">Remote</option>
-                <option value="Hybrid">Hybrid</option>
-                <option value="Onsite">Onsite</option>
-                </Select>
+                placeholder="Select work mode"
+                options={WORK_MODE_OPTIONS}
+              />
 
-                <Select
+              <Select
                 value={formData.status}
                 onChange={(event) =>
-                    handleChange("status", event.target.value as ApplicationStatus)
+                  handleChange("status", event.target.value as ApplicationStatus)
                 }
-                >
-                <option value="SAVED">Saved</option>
-                <option value="APPLIED">Applied</option>
-                <option value="IN_PROGRESS">In Progress</option>
-                <option value="INTERVIEW">Interview</option>
-                <option value="OFFER">Offer</option>
-                <option value="REJECTED">Rejected</option>
-                </Select>
+                options={APPLICATION_STATUS_OPTIONS}
+              />
 
-                <Input
+              <Input
                 value={formData.source || ""}
                 onChange={(event) => handleChange("source", event.target.value)}
                 placeholder="Source"
-                />
+              />
             </div>
-            </section>
+          </section>
 
-            {/* Job URL */}
-            <section className="space-y-3">
+          <section className="space-y-3">
             <div>
-                <h3 className="font-semibold">Job Link</h3>
-                <p className="mt-1 text-xs opacity-60">
+              <h3 className="font-semibold">Job Link</h3>
+              <p className="mt-1 text-xs opacity-60">
                 Link to the original job posting.
-                </p>
+              </p>
             </div>
 
             <Input
-                value={formData.jobUrl || ""}
-                onChange={(event) => handleChange("jobUrl", event.target.value)}
-                placeholder="Job URL"
+              value={formData.jobUrl || ""}
+              onChange={(event) => handleChange("jobUrl", event.target.value)}
+              placeholder="Job URL"
             />
-            </section>
+          </section>
 
-            {/* Description and notes */}
-            <section className="space-y-3">
+          <section className="space-y-3">
             <div>
-                <h3 className="font-semibold">Description & Notes</h3>
-                <p className="mt-1 text-xs opacity-60">
+              <h3 className="font-semibold">Description & Notes</h3>
+              <p className="mt-1 text-xs opacity-60">
                 Job description and your personal notes.
-                </p>
+              </p>
             </div>
 
-            <Textarea
-                value={formData.jobDescription || ""}
-                onChange={(event) =>
-                handleChange("jobDescription", event.target.value)
-                }
-                placeholder="Job description"
-                rows={4}
+            <JobDescriptionInput
+              value={formData.jobDescription || ""}
+              onChange={(value) => handleChange("jobDescription", value)}
+              onImageUpload={handleImageUpload}
+              isExtracting={isExtractingImage}
             />
 
             <Textarea
-                value={formData.notes || ""}
-                onChange={(event) => handleChange("notes", event.target.value)}
-                placeholder="Notes"
-                rows={3}
+              value={formData.notes || ""}
+              onChange={(event) => handleChange("notes", event.target.value)}
+              placeholder="Notes"
+              rows={3}
             />
-            </section>
+          </section>
 
-            {/* Edit actions */}
-            <div className="flex justify-end gap-2 border-t border-[var(--border)] pt-4">
+          <div className="flex justify-end gap-2 border-t border-[var(--border)] pt-4">
             <Button variant="secondary" onClick={handleCancelEdit}>
-                Cancel
+              Cancel
             </Button>
 
-            <Button onClick={handleSave} disabled={isUpdating || !hasChanges}>
-            {isUpdating ? (
+            <Button
+              onClick={handleSave}
+              disabled={isUpdating || isExtractingImage || !hasChanges}
+            >             
+              {isUpdating ? (
                 <span className="flex items-center gap-2">
-                <Spinner />
-                Saving...
+                  <Spinner />
+                  Saving...
                 </span>
-            ) : (
+              ) : (
                 "Save Changes"
-            )}
+              )}
             </Button>
-
-            </div>
+          </div>
         </div>
-        ) : (
+      ) : (
         <div className="space-y-5 text-sm">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h3 className="text-2xl font-bold">
-                {application.companyName}
-              </h3>
+              <h3 className="text-2xl font-bold">{application.companyName}</h3>
               <p className="mt-1 opacity-70">{application.jobTitle}</p>
             </div>
 
@@ -254,14 +278,24 @@ export const ApplicationDetailsModal = ({
             />
           </div>
 
-          <DetailBlock
-            label="Job Description"
-            value={application.jobDescription}
-          />
+          <CollapsibleSection
+            title="Job Description"
+            defaultOpen
+          >
+            <ScrollableContent
+              content={application.jobDescription}
+              maxHeight="max-h-80"
+            />
+          </CollapsibleSection>
 
-          <DetailBlock label="Notes" value={application.notes} />
+          <CollapsibleSection title="Notes">
+            <ScrollableContent
+              content={application.notes}
+              maxHeight=""
+            />
+          </CollapsibleSection>
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 border-t border-[var(--border)] pt-4">
             <Button variant="secondary" onClick={onClose}>
               Close
             </Button>
@@ -284,22 +318,6 @@ const DetailItem = ({ label, value }: DetailItemProps) => {
     <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-3">
       <p className="text-xs font-medium uppercase opacity-60">{label}</p>
       <div className="mt-1 break-words">{value || "-"}</div>
-    </div>
-  );
-};
-
-interface DetailBlockProps {
-  label: string;
-  value?: string;
-}
-
-const DetailBlock = ({ label, value }: DetailBlockProps) => {
-  return (
-    <div>
-      <p className="mb-2 font-medium">{label}</p>
-      <div className="min-h-20 whitespace-pre-wrap rounded-xl border border-[var(--border)] bg-[var(--background)] p-4 leading-6 opacity-80">
-        {value || "-"}
-      </div>
     </div>
   );
 };

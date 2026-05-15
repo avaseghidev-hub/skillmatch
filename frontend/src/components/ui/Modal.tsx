@@ -1,55 +1,61 @@
-import { useEffect } from "react";
 import type { ReactNode } from "react";
-import { modalStyles } from "../../styles/components/modal";
+import { IconButton } from "./IconButton";
 
 interface ModalProps {
-  title: string;
+  title?: string;
   children: ReactNode;
   onClose: () => void;
-  size?: "md" | "lg" | "xl"; // controls modal size 
+  size?: "sm" | "md" | "lg" | "xl";
 }
 
-export const Modal = ({ title, children, onClose, size }: ModalProps) => {
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
+const sizeClasses = {
+  sm: "max-w-md",
+  md: "max-w-2xl",
+  lg: "max-w-4xl",
+  xl: "max-w-6xl",
+};
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
-
-  // choose width based on mode (view/edit)
-  const sizeClass = {
-    md: "max-w-2xl",
-    lg: "max-w-3xl",
-    xl: "max-w-5xl",
-  }[size || "lg"];
-
+export const Modal = ({
+  title,
+  children,
+  onClose,
+  size = "lg",
+}: ModalProps) => {
   return (
-    <div className={modalStyles.overlay} onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      {/* Modal container */}
       <div
-        className={`${modalStyles.panel} w-full ${sizeClass}`}
-        onClick={(event) => event.stopPropagation()}
+        className={`
+          relative
+          flex
+          max-h-[90vh]
+          w-full
+          flex-col
+          overflow-hidden
+          rounded-3xl
+          border
+          border-[var(--border)]
+          bg-[var(--card)]
+          shadow-2xl
+          ${sizeClasses[size]}
+        `}
       >
-        {/* Header */}
-        <div className={modalStyles.header}>
-          <h2 className={modalStyles.title}>{title}</h2>
+        {/* Sticky modal header */}
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--border)] bg-[var(--card)] px-6 py-5">
+          <h2 className="text-2xl font-bold">{title}</h2>
 
-          <button
-            type="button"
+          <IconButton
             onClick={onClose}
-            className={modalStyles.closeButton}
-            aria-label="Close modal"
+            ariaLabel="Close modal"
           >
-            ×
-          </button>
+            <span className="text-xl leading-none">×</span>
+          </IconButton>
         </div>
 
-        {/* Content */}
-        {children}
+        {/* Scrollable modal content */}
+        <div className="overflow-y-auto px-6 py-5">
+          {children}
+        </div>
       </div>
     </div>
   );

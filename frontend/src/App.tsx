@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { ApplicationsPage } from "./features/applications/pages/ApplicationsPage";
 import { LoginPage } from "./features/auth/pages/LoginPage";
 import { RegisterPage } from "./features/auth/pages/RegisterPage";
@@ -13,9 +14,6 @@ function App() {
   const [hasProfile, setHasProfile] = useState(false);
   const [isCheckingProfile, setIsCheckingProfile] = useState(false);
 
-  /**
-   * Check if the logged-in user already has a profile.
-   */
   useEffect(() => {
     if (!token || !userId) {
       setHasProfile(false);
@@ -25,9 +23,7 @@ function App() {
     const checkProfile = async () => {
       try {
         setIsCheckingProfile(true);
-
         await getProfileByUserId(userId);
-
         setHasProfile(true);
       } catch {
         setHasProfile(false);
@@ -56,10 +52,19 @@ function App() {
   }
 
   if (!hasProfile) {
-    return <ProfileSetupPage onProfileCreated={() => setHasProfile(true)} />;
+    return <ProfileSetupPage onProfileSaved={() => setHasProfile(true)} />;
   }
-
-  return <ApplicationsPage />;
+  
+  return (
+    <Routes>
+      <Route path="/" element={<ApplicationsPage />} />
+      <Route
+        path="/profile"
+        element={<ProfileSetupPage onProfileSaved={() => setHasProfile(true)} />}
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
 }
 
 export default App;

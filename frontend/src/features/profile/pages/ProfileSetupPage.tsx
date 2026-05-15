@@ -1,8 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/context/AuthContext";
-import { createProfile } from "../api/profileApi";
-import type { CreateUserProfileRequest } from "../../../types/profile";
+import {
+  createProfile,
+  getProfileByUserId,
+  updateProfile,
+} from "../api/profileApi";
+import type {
+  CreateUserProfileRequest,
+  UserProfile,
+} from "../../../types/profile";
 
 import { Card } from "../../../components/ui/Card";
 import { Input } from "../../../components/ui/Input";
@@ -11,14 +19,14 @@ import { Select } from "../../../components/ui/Select";
 import { Button } from "../../../components/ui/Button";
 import { Spinner } from "../../../components/ui/Spinner";
 import { ResumeUploadBox } from "../../resume/components/ResumeUploadBox";
+import { WORK_MODE_OPTIONS } from "../../applications/constants/applicationOptions";
+import { ProfileCompletionCard } from "../components/ProfileCompletionCard";
+import { ResumeManagementPanel } from "../../resume/components/ResumeManagementPanel";
 
 type ProfileSetupPageProps = {
-  onProfileCreated: () => void;
+  onProfileSaved: () => void;
 };
 
-/**
- * Create initial profile form state.
- */
 const createInitialFormData = (
   userId: number,
   fullName: string
@@ -33,9 +41,20 @@ const createInitialFormData = (
   resumeText: "",
 });
 
-/**
- * Extract simple profile hints from resume text.
- */
+const mapProfileToFormData = (
+  profile: UserProfile,
+  userId: number
+): CreateUserProfileRequest => ({
+  userId,
+  fullName: profile.fullName || "",
+  targetRole: profile.targetRole || "",
+  location: profile.location || "",
+  preferredWorkMode: profile.preferredWorkMode || "",
+  skills: profile.skills || "",
+  languages: profile.languages || "",
+  resumeText: profile.resumeText || "",
+});
+
 const parseResumeText = (resumeText: string) => {
   const detectedSkills: string[] = [];
 
@@ -69,23 +88,48 @@ const parseResumeText = (resumeText: string) => {
   };
 };
 
-export const ProfileSetupPage = ({
-  onProfileCreated,
-}: ProfileSetupPageProps) => {
+export const ProfileSetupPage = ({ onProfileSaved }: ProfileSetupPageProps) => {
   const { user, userId } = useAuth();
+  const navigate = useNavigate();
 
   const safeUserId = userId ?? 0;
 
+  const [existingProfile, setExistingProfile] = useState<UserProfile | null>(
+    null
+  );
   const [formData, setFormData] = useState<CreateUserProfileRequest>(() =>
     createInitialFormData(safeUserId, user?.name ?? "")
   );
 
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  /**
-   * Update profile field.
-   */
+  const isEditMode = Boolean(existingProfile);
+
+  useEffect(() => {
+    if (!safeUserId) return;
+
+    const loadProfile = async () => {
+      try {
+        setIsLoadingProfile(true);
+        setError("");
+
+        const profile = await getProfileByUserId(safeUserId);
+
+        setExistingProfile(profile);
+        setFormData(mapProfileToFormData(profile, safeUserId));
+      } catch {
+        setExistingProfile(null);
+        setFormData(createInitialFormData(safeUserId, user?.name ?? ""));
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    };
+
+    loadProfile();
+  }, [safeUserId, user?.name]);
+
   const handleChange = <K extends keyof CreateUserProfileRequest>(
     field: K,
     value: CreateUserProfileRequest[K]
@@ -96,9 +140,6 @@ export const ProfileSetupPage = ({
     }));
   };
 
-  /**
-   * Handle extracted resume text and auto-fill fields.
-   */
   const handleResumeTextExtracted = (resumeText: string) => {
     const parsed = parseResumeText(resumeText);
 
@@ -110,9 +151,6 @@ export const ProfileSetupPage = ({
     }));
   };
 
-  /**
-   * Create user profile.
-   */
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -125,31 +163,66 @@ export const ProfileSetupPage = ({
       setError("");
       setIsSubmitting(true);
 
-      await createProfile({
-        ...formData,
-        userId: safeUserId,
-      });
+      if (isEditMode) {
+        await updateProfile(safeUserId, formData);
+      } else {
+        await createProfile({
+          ...formData,
+          userId: safeUserId,
+        });
+      }
 
-      onProfileCreated();
+      onProfileSaved();
+      navigate("/");
     } catch (error) {
-      console.error("Profile setup failed", error);
-      setError("Failed to complete profile setup. Please try again.");
+      console.error("Profile save failed", error);
+      setError("Failed to save profile. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleRemoveResume = () => {
+    setFormData((prev) => ({
+      ...prev,
+      resumeText: "",
+      skills: "",
+    }));
+  };
+
+  if (isLoadingProfile) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
+        Loading profile...
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[var(--background)] p-6 text-[var(--foreground)]">
       <div className="mx-auto max-w-3xl">
-        <ResumeUploadBox onTextExtracted={handleResumeTextExtracted} />
+        {formData.resumeText.trim() ? (
+          <ResumeManagementPanel
+            resumeText={formData.resumeText}
+            skills={formData.skills}
+            onRemoveResume={handleRemoveResume}
+            onReplaceResume={handleResumeTextExtracted}
+          />
+        ) : (
+          <ResumeUploadBox onTextExtracted={handleResumeTextExtracted} />
+        )}
+
+        <ProfileCompletionCard profile={formData} />
 
         <Card className="p-6">
-          <h1 className="text-3xl font-bold">Complete your profile</h1>
+          <h1 className="text-3xl font-bold">
+            {isEditMode ? "Edit your profile" : "Complete your profile"}
+          </h1>
 
           <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-            Review the extracted resume information and complete any missing
-            fields.
+            {isEditMode
+              ? "Update your profile information and resume details."
+              : "Review the extracted resume information and complete any missing fields."}
           </p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-5">
@@ -184,12 +257,9 @@ export const ProfileSetupPage = ({
                 onChange={(event) =>
                   handleChange("preferredWorkMode", event.target.value)
                 }
-              >
-                <option value="">Preferred work mode</option>
-                <option value="Remote">Remote</option>
-                <option value="Hybrid">Hybrid</option>
-                <option value="Onsite">Onsite</option>
-              </Select>
+                placeholder="Preferred work mode"
+                options={WORK_MODE_OPTIONS}
+              />
             </div>
 
             <Textarea
@@ -204,7 +274,7 @@ export const ProfileSetupPage = ({
               onChange={(event) =>
                 handleChange("languages", event.target.value)
               }
-              placeholder="Languages"
+              placeholder="Languages (e.g. English, German)"
               rows={2}
             />
 
@@ -223,16 +293,30 @@ export const ProfileSetupPage = ({
               </p>
             )}
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <Spinner />
-                  Saving profile...
-                </span>
-              ) : (
-                "Complete profile"
+            <div className="flex justify-end gap-2">
+              {isEditMode && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => navigate("/")}
+                >
+                  Cancel
+                </Button>
               )}
-            </Button>
+
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Spinner />
+                    Saving profile...
+                  </span>
+                ) : isEditMode ? (
+                  "Save profile"
+                ) : (
+                  "Complete profile"
+                )}
+              </Button>
+            </div>
           </form>
         </Card>
       </div>

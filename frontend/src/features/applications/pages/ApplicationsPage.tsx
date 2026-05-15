@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ApplicationList } from "../components/ApplicationList";
 import { ApplicationForm } from "../components/ApplicationForm";
 import { Button } from "../../../components/ui/Button";
@@ -22,6 +23,8 @@ import {
   syncFiltersToUrl,
 } from "../utils/applicationFilterUrlUtils";
 import { useAuth } from "../../auth/context/AuthContext";
+import { EmptyState } from "../../../components/ui/EmptyState";
+import { UserMenu } from "../../profile/components/UserMenu";
 
 export const ApplicationsPage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -29,7 +32,7 @@ export const ApplicationsPage = () => {
   const [filters, setFilters] = useState<ApplicationFilters>(() =>
     getFiltersFromUrl()
   );
-
+  const navigate = useNavigate();
   const {
     applications,
     loading,
@@ -100,16 +103,14 @@ export const ApplicationsPage = () => {
         </div>
 
         {!loading && !isFormOpen && (
+          
           <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="text-sm font-semibold">
-                {user?.name}
-              </p>
-
-              <p className="text-xs text-[var(--muted-foreground)]">
-                {user?.email}
-              </p>
-            </div>
+            <UserMenu
+              name={user?.name}
+              email={user?.email}
+              onProfileClick={() => navigate("/profile")}
+              onLogout={logoutUser}
+            />
 
             <ThemeToggle />
 
@@ -120,10 +121,12 @@ export const ApplicationsPage = () => {
             >
               Logout
             </Button>
-
-            <Button onClick={() => setIsFormOpen(true)}>
-              + Add Job Application
-            </Button>
+           { applications.length > 0 && (
+              <Button onClick={() => setIsFormOpen(true)}>
+                + Add Job Application
+              </Button>
+            )}
+ 
           </div>
         )}
       </div>
@@ -170,51 +173,43 @@ export const ApplicationsPage = () => {
           <ApplicationSkeleton />
           <ApplicationSkeleton />
         </div>
-      ) : !isFormOpen && filteredApplications.length > 0 ? (
-        <ApplicationList
-          applications={filteredApplications}
-          onAnalyze={handleAnalyze}
-          onClearAnalysis={handleClearAnalysis}
-          onUpdate={handleUpdateApplication}
-          loadingId={loadingId}
-          errorById={errorById}
-          updatingId={updatingId}
-          onAddClick={() => setIsFormOpen(true)}
-          onDelete={handleDeleteApplication}
-          deletingId={deletingId}
-        />
-      ) : !isFormOpen && applications.length > 0 && filtersAreActive ? (
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-8 text-center">
-          <h2 className="text-lg font-semibold">No applications found</h2>
-          <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-            No job applications match your current filters.
-          </p>
-
-          <div className="mt-4">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setFilters(initialApplicationFilters)}
-            >
-              Clear Filters
-            </Button>
-          </div>
-        </div>
-      ) : !isFormOpen && applications.length === 0 ? (
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-8 text-center">
-          <h2 className="text-lg font-semibold">No applications yet</h2>
-          <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-            Add your first job application to start tracking and analyzing
-            matches.
-          </p>
-
-          <div className="mt-4">
-            <Button type="button" onClick={() => setIsFormOpen(true)}>
-              + Add Job Application
-            </Button>
-          </div>
-        </div>
-      ) : null}
+        ) : !isFormOpen && filteredApplications.length > 0 ? (
+          <ApplicationList
+            applications={filteredApplications}
+            onAnalyze={handleAnalyze}
+            onClearAnalysis={handleClearAnalysis}
+            onUpdate={handleUpdateApplication}
+            loadingId={loadingId}
+            errorById={errorById}
+            updatingId={updatingId}
+            onDelete={handleDeleteApplication}
+            deletingId={deletingId}
+          />
+        ) : !isFormOpen && applications.length > 0 && filtersAreActive ? (
+          <EmptyState
+            title="No applications found"
+            description="No job applications match your current filters."
+            action={
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setFilters(initialApplicationFilters)}
+              >
+                Clear Filters
+              </Button>
+            }
+          />
+        ) : !isFormOpen && applications.length === 0 ? (
+          <EmptyState
+            title="No applications yet"
+            description="Add your first job application to start tracking and analyzing matches."
+            action={
+              <Button type="button" onClick={() => setIsFormOpen(true)}>
+                + Add Job Application
+              </Button>
+            }
+          />
+        ) : null}
     </div>
   );
 };
