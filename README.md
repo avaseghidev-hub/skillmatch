@@ -80,6 +80,16 @@ The project demonstrates modern full-stack architecture using React, TypeScript,
 - Collapsible sections
 - Clean SaaS-style profile and application workflows
 
+## DevOps & Infrastructure
+
+- Dockerized frontend
+- Dockerized backend
+- Full-stack Docker Compose setup
+- Swagger/OpenAPI documentation
+- GitHub Actions CI workflow
+- Production-ready container architecture
+
+
 ---
 
 # Tech Stack
@@ -110,10 +120,40 @@ The project demonstrates modern full-stack architecture using React, TypeScript,
 
 - PostgreSQL
 - Docker
+- Docker Compose
+- GitHub Actions CI
+- Swagger / OpenAPI
 - Git & GitHub
 - IntelliJ IDEA
 - VS Code
+---
 
+# Installation & Setup
+
+## Clone Repository
+```bash
+git clone https://github.com/avaseghidev-hub/skillmatch.git
+cd skillmatch-fullstack
+```
+## Run with Docker
+```bash
+docker compose up --build
+```
+
+## Frontend
+```bash
+http://localhost:3000
+```
+
+## Backend API
+```bash
+http://localhost:8080/api/v1
+```
+
+## Swagger API Docs
+```bash
+http://localhost:8080/api/v1/swagger-ui/index.html
+```
 ---
 
 # Architecture
@@ -141,11 +181,17 @@ skillmatch-fullstack/
 │   │   ├── jobapplication/
 │   │   ├── jobdescription/
 │   │   └── skillmatchresult/
+│   │
+│   ├── src/test/java/com/azadeh/skillmatch/
+│   │   ├── auth/
+│   │   ├── skillmatchresult/
+│   │   └── SkillmatchApplicationTests.java
 │
 ├── screenshots/
-└── README.md 
-```
+└── README.md
 
+```
+The project is designed with production-oriented separation of concerns, reusable frontend modules, stateless JWT authentication, containerized services, and scalable backend domain architecture.
 
 ---
 
@@ -198,8 +244,6 @@ Screenshots will be added soon.
 - React Query integration
 - Role-based authorization
 - Automated testing
-- CI/CD pipeline
-- Docker Compose environment
 - Kubernetes deployment
 - Cloud deployment
 - Email notifications and reminders

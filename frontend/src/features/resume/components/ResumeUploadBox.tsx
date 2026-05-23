@@ -1,6 +1,5 @@
 import { useState } from "react";
 import type { ChangeEvent } from "react";
-import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
 import { Spinner } from "../../../components/ui/Spinner";
 import { extractResumeText } from "../api/resumeApi";
