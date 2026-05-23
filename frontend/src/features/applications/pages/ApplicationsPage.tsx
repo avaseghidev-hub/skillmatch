@@ -24,7 +24,7 @@ import {
 } from "../utils/applicationFilterUrlUtils";
 import { useAuth } from "../../auth/context/AuthContext";
 import { EmptyState } from "../../../components/ui/EmptyState";
-import { UserMenu } from "../../profile/components/UserMenu";
+import { UserMenu } from "../../auth/components/UserMenu";
 
 export const ApplicationsPage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);

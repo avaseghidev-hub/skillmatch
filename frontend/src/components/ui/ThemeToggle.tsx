@@ -1,4 +1,4 @@
-import { useTheme } from "../../features/applications/hooks/useTheme";
+import { useTheme } from "../../hooks/useTheme";
 import { Button } from "./Button";
 
 export const ThemeToggle = () => {
