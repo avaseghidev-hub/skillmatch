@@ -87,8 +87,8 @@ The project demonstrates modern full-stack architecture using React, TypeScript,
 - Full-stack Docker Compose setup
 - Swagger/OpenAPI documentation
 - GitHub Actions CI workflow
+- Automated frontend and backend testing
 - Production-ready container architecture
-
 
 ---
 
@@ -104,6 +104,8 @@ The project demonstrates modern full-stack architecture using React, TypeScript,
 - React Hooks
 - Context API
 - Axios
+- Vitest
+- React Testing Library
 
 ## Backend
 
@@ -115,6 +117,8 @@ The project demonstrates modern full-stack architecture using React, TypeScript,
 - Apache PDFBox
 - Tesseract OCR
 - Hibernate / JPA
+- JUnit
+- Mockito
 
 ## Database & DevOps
 
@@ -170,6 +174,8 @@ skillmatch-fullstack/
 │   │   │   ├── applications/
 │   │   │   ├── profile/
 │   │   │   └── resume/
+│   │   ├── hooks/
+│   │   ├── test/
 │   │   ├── api/
 │   │   └── types/
 │
@@ -243,7 +249,6 @@ Screenshots will be added soon.
 - Advanced resume parsing with NLP
 - React Query integration
 - Role-based authorization
-- Automated testing
 - Kubernetes deployment
 - Cloud deployment
 - Email notifications and reminders
